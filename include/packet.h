@@ -1,5 +1,5 @@
-#ifndef HEADER_H
-#define HEADER_H
+#ifndef PACKET_H
+#define PACKET_H
 
 #include<string>
 #include<cstdint>
@@ -86,6 +86,101 @@ Header Header::deserialize(byte* data) {
     delete[] protocol;
 
     return header;
+};
+
+class Payload {
+public:
+    string data;
+
+    Payload(string d)
+        : data(d) {}
+
+    byte* serialize();
+    static Payload deserialize(byte* data);
+};
+
+byte* Payload::serialize() {
+    size_t data_len = data.size();
+    size_t total_size = sizeof(size_t) + data_len;
+
+    byte* serialized_data = new byte[total_size];
+
+    memcpy(serialized_data, &data_len, sizeof(size_t));
+    memcpy(serialized_data + sizeof(size_t), data.c_str(), data_len);
+
+    if (serialized_data == nullptr) {
+        cout << "Error: Memory allocation failed!" << endl;
+        throw std::bad_alloc();
+    }
+
+    return serialized_data;
 }
 
-#endif // HEADER_H
+Payload Payload::deserialize(byte* data) {
+    size_t data_len;
+    memcpy(&data_len, data, sizeof(size_t));
+    char* payload_data = new char[data_len + 1];
+    memcpy(payload_data, data + sizeof(size_t), data_len);
+    payload_data[data_len] = '\0';
+
+    Payload payload(payload_data);
+
+    delete[] payload_data;
+
+    return payload;
+};
+
+class Packet {
+public:
+    Header header;
+    Payload payload;
+
+    Packet(Header h, Payload p)
+        : header(h), payload(p) {}
+
+    byte* serialize();
+    static Packet deserialize(byte* data);
+};
+
+byte* Packet::serialize() {
+    byte* serialized_header = header.serialize();
+    byte* serialized_payload = payload.serialize();
+
+    size_t header_size = sizeof(size_t) + header.source_ip.size() 
+                       + sizeof(size_t) + header.destination_ip.size() 
+                       + sizeof(size_t) + header.protocol_type.size()
+                       + sizeof(int) * 2;
+    
+    size_t payload_size = sizeof(size_t) + payload.data.size();
+
+    size_t total_size = header_size + payload_size;
+
+    byte* serialized_packet = new byte[total_size];
+
+    memcpy(serialized_packet, serialized_header, header_size);
+    memcpy(serialized_packet + header_size, serialized_payload, payload_size);
+
+    delete[] serialized_header;
+    delete[] serialized_payload;
+
+    if (serialized_packet == nullptr) {
+        cout << "Error: Memory allocation failed!" << endl;
+        throw std::bad_alloc();
+    }
+
+    return serialized_packet;
+}
+
+Packet Packet::deserialize(byte* data) {
+    Header header = Header::deserialize(data);
+    Payload payload = Payload::deserialize(data + sizeof(size_t) + header.source_ip.size() 
+                                           + sizeof(size_t) + header.destination_ip.size() 
+                                           + sizeof(size_t) + header.protocol_type.size()
+                                           + sizeof(int) * 2);
+
+    Packet packet(header, payload);
+
+    return packet;
+}
+
+#endif // PACKET_H

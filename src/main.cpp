@@ -1,127 +1,82 @@
-// #ifndef HEADER_H
 #include <iostream>
 #include <cassert>
 #include <thread>
 #include <chrono>
-#include "../include/header.h" // Include your header file
-#define  HEADER_H
+#include "../include/packet.h"
+#define  PACKET_H
 using namespace std;
 
 #define GREEN "\033[32m"
 #define RESET "\033[0m"
 #define BOLD  "\033[1m"
 
-void test_basic_serialization() {
-    // Create a Header object
+void test_packet_serialization() {
+    // Create a Header and Payload object
     Header header("192.168.1.1", "10.0.0.1", "TCP", 8080, 80);
-    
-    // Serialize the Header
-    byte* serialized_data = header.serialize();
-    
-    // Deserialize to create a new Header object
-    Header deserialized_header = Header::deserialize(serialized_data);
-    
-    // Check the integrity of the data
-    assert(header.source_ip == deserialized_header.source_ip);
-    assert(header.destination_ip == deserialized_header.destination_ip);
-    assert(header.protocol_type == deserialized_header.protocol_type);
-    assert(header.source_port == deserialized_header.source_port);
-    assert(header.destination_port == deserialized_header.destination_port);
-    
-    // Clean up
-    delete[] serialized_data;
+    Payload payload("This is a test payload.");
 
-    std::cout << "Basic serialization test passed!" << std::endl;
-}
+    // Create a Packet object
+    Packet packet(header, payload);
 
-void test_multiple_headers() {
-    Header header1("192.168.1.1", "10.0.0.1", "TCP", 8080, 80);
-    Header header2("172.16.0.1", "192.168.0.1", "UDP", 3000, 53);
+    // Serialize the Packet
+    byte* serialized_packet = packet.serialize();
 
-    // Serialize both headers
-    byte* serialized_data1 = header1.serialize();
-    byte* serialized_data2 = header2.serialize();
-
-    // Deserialize both headers
-    Header deserialized_header1 = Header::deserialize(serialized_data1);
-    Header deserialized_header2 = Header::deserialize(serialized_data2);
+    // Deserialize to create a new Packet object
+    Packet deserialized_packet = Packet::deserialize(serialized_packet);
 
     // Check the integrity of the data
-    assert(header1.source_ip == deserialized_header1.source_ip);
-    assert(header1.destination_ip == deserialized_header1.destination_ip);
-    assert(header1.protocol_type == deserialized_header1.protocol_type);
-    assert(header1.source_port == deserialized_header1.source_port);
-    assert(header1.destination_port == deserialized_header1.destination_port);
-
-    assert(header2.source_ip == deserialized_header2.source_ip);
-    assert(header2.destination_ip == deserialized_header2.destination_ip);
-    assert(header2.protocol_type == deserialized_header2.protocol_type);
-    assert(header2.source_port == deserialized_header2.source_port);
-    assert(header2.destination_port == deserialized_header2.destination_port);
+    assert(packet.header.source_ip == deserialized_packet.header.source_ip);
+    assert(packet.header.destination_ip == deserialized_packet.header.destination_ip);
+    assert(packet.header.protocol_type == deserialized_packet.header.protocol_type);
+    assert(packet.header.source_port == deserialized_packet.header.source_port);
+    assert(packet.header.destination_port == deserialized_packet.header.destination_port);
+    assert(packet.payload.data == deserialized_packet.payload.data);
 
     // Clean up
-    delete[] serialized_data1;
-    delete[] serialized_data2;
+    delete[] serialized_packet;
 
-    std::cout << "Multiple headers test passed!" << std::endl;
+    std::cout << "Packet serialization test passed!" << std::endl;
 }
 
-void test_edge_cases() {
-    // Test with empty fields
+void test_edge_case_empty_payload() {
+    Header header("192.168.1.1", "10.0.0.1", "UDP", 12345, 54321);
+    Payload payload(""); // Empty payload
+
+    Packet packet(header, payload);
+
+    byte* serialized_packet = packet.serialize();
+    Packet deserialized_packet = Packet::deserialize(serialized_packet);
+
+    assert(packet.payload.data == deserialized_packet.payload.data);
+    
+    delete[] serialized_packet;
+    std::cout << "Empty payload test passed!" << std::endl;
+}
+
+void test_edge_case_empty_header() {
+    // Empty header fields
     Header header("", "", "", 0, 0);
-    
-    // Serialize the Header
-    byte* serialized_data = header.serialize();
-    
-    // Deserialize to create a new Header object
-    Header deserialized_header = Header::deserialize(serialized_data);
-    
-    // Check the integrity of the data
-    assert(header.source_ip == deserialized_header.source_ip);
-    assert(header.destination_ip == deserialized_header.destination_ip);
-    assert(header.protocol_type == deserialized_header.protocol_type);
-    assert(header.source_port == deserialized_header.source_port);
-    assert(header.destination_port == deserialized_header.destination_port);
-    
-    // Clean up
-    delete[] serialized_data;
+    Payload payload("Data");
 
-    std::cout << "Edge cases test passed!" << std::endl;
-}
+    Packet packet(header, payload);
 
-void test_boundary_values() {
-    // Test with maximum expected lengths
-    Header header("255.255.255.255", "255.255.255.255", "TCP", 65535, 65535);
-    
-    // Serialize the Header
-    byte* serialized_data = header.serialize();
-    
-    // Deserialize to create a new Header object
-    Header deserialized_header = Header::deserialize(serialized_data);
-    
-    // Check the integrity of the data
-    assert(header.source_ip == deserialized_header.source_ip);
-    assert(header.destination_ip == deserialized_header.destination_ip);
-    assert(header.protocol_type == deserialized_header.protocol_type);
-    assert(header.source_port == deserialized_header.source_port);
-    assert(header.destination_port == deserialized_header.destination_port);
-    
-    // Clean up
-    delete[] serialized_data;
+    byte* serialized_packet = packet.serialize();
+    Packet deserialized_packet = Packet::deserialize(serialized_packet);
 
-    std::cout << "Boundary values test passed!" << std::endl;
+    assert(packet.header.source_ip == deserialized_packet.header.source_ip);
+    assert(packet.header.destination_ip == deserialized_packet.header.destination_ip);
+    
+    delete[] serialized_packet;
+    std::cout << "Empty header test passed!" << std::endl;
 }
 
 int main() {
-    // Run tests
     std::cout << GREEN << BOLD;
-    test_basic_serialization();
+    test_packet_serialization();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    test_multiple_headers();
+    test_edge_case_empty_payload();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    test_edge_cases();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    test_boundary_values();
+    test_edge_case_empty_header();
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     std::cout << "All tests passed!" << std::endl;
