@@ -46,6 +46,7 @@ byte* Header::serialize() {
     memcpy(serialized_data + sizeof(size_t) + src_ip_len + sizeof(size_t) + dest_ip_len + sizeof(size_t) + protocol_len, &source_port, sizeof(int));
     memcpy(serialized_data + sizeof(size_t) + src_ip_len + sizeof(size_t) + dest_ip_len + sizeof(size_t) + protocol_len + sizeof(int), &destination_port, sizeof(int));
 
+
     return serialized_data;
 }
 
