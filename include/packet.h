@@ -46,11 +46,6 @@ byte* Header::serialize() {
     memcpy(serialized_data + sizeof(size_t) + src_ip_len + sizeof(size_t) + dest_ip_len + sizeof(size_t) + protocol_len, &source_port, sizeof(int));
     memcpy(serialized_data + sizeof(size_t) + src_ip_len + sizeof(size_t) + dest_ip_len + sizeof(size_t) + protocol_len + sizeof(int), &destination_port, sizeof(int));
 
-    if (serialized_data == nullptr) {
-        cout << "Error: Memory allocation failed!" << endl;
-        throw std::bad_alloc();
-    }
-
     return serialized_data;
 }
 
