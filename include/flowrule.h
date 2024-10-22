@@ -40,9 +40,9 @@ public:
 struct MatchFields {
     string src_ip;
     string dest_ip;
+    string protocol;
     uint16_t src_port;
     uint16_t dest_port;
-    uint8_t protocol;
 
     bool operator==(const MatchFields &other) const {
         return (

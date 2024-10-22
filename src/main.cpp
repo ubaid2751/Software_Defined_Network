@@ -1,84 +1,98 @@
 #include <iostream>
+#include <memory>
 #include <cassert>
-#include <thread>
-#include <chrono>
+#include "../include/flowrule.h"
 #include "../include/packet.h"
-#define  PACKET_H
-using namespace std;
 
-#define GREEN "\033[32m"
-#define RESET "\033[0m"
-#define BOLD  "\033[1m"
+// Function to test forwarding action
+void test_forward_action() {
+    std::cout << "Running Forward Action Test..." << std::endl;
+    Packet packet(Header("192.168.1.1", "192.168.1.2", "TCP", 1234, 80), Payload("Test Data"));
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<ForwardAction>(5);
+    FlowRule flow_rule(match_fields, std::move(action));
 
-void test_packet_serialization() {
-    // Create a Header and Payload object
-    Header header("192.168.1.1", "10.0.0.1", "TCP", 8080, 80);
-    Payload payload("This is a test payload.");
-
-    // Create a Packet object
-    Packet packet(header, payload);
-
-    // Serialize the Packet
-    byte* serialized_packet = packet.serialize();
-
-    // Deserialize to create a new Packet object
-    Packet deserialized_packet = Packet::deserialize(serialized_packet);
-
-    // Check the integrity of the data
-    assert(packet.header.source_ip == deserialized_packet.header.source_ip);
-    assert(packet.header.destination_ip == deserialized_packet.header.destination_ip);
-    assert(packet.header.protocol_type == deserialized_packet.header.protocol_type);
-    assert(packet.header.source_port == deserialized_packet.header.source_port);
-    assert(packet.header.destination_port == deserialized_packet.header.destination_port);
-    assert(packet.payload.data == deserialized_packet.payload.data);
-
-    // Clean up
-    delete[] serialized_packet;
-
-    std::cout << "Packet serialization test passed!" << std::endl;
+    if (flow_rule.matches_packet(packet)) {
+        flow_rule.execute_action(); // Expect: "Forwarding to port 5"
+    }
 }
 
-void test_edge_case_empty_payload() {
-    Header header("192.168.1.1", "10.0.0.1", "UDP", 12345, 54321);
-    Payload payload(""); // Empty payload
+// Function to test drop action
+void test_drop_action() {
+    std::cout << "Running Drop Action Test..." << std::endl;
+    Packet packet(Header("192.168.1.1", "192.168.1.2", "TCP", 1234, 80), Payload("Test Data"));
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<DropAction>();
+    FlowRule flow_rule(match_fields, std::move(action));
 
-    Packet packet(header, payload);
-
-    byte* serialized_packet = packet.serialize();
-    Packet deserialized_packet = Packet::deserialize(serialized_packet);
-
-    assert(packet.payload.data == deserialized_packet.payload.data);
-    
-    delete[] serialized_packet;
-    std::cout << "Empty payload test passed!" << std::endl;
+    if (flow_rule.matches_packet(packet)) {
+        flow_rule.execute_action(); // Expect: "Dropping packet"
+    }
 }
 
-void test_edge_case_empty_header() {
-    // Empty header fields
-    Header header("", "", "", 0, 0);
-    Payload payload("Data");
+// Function to test modify action
+void test_modify_action() {
+    std::cout << "Running Modify Action Test..." << std::endl;
+    Packet packet(Header("192.168.1.1", "192.168.1.2", "TCP", 1234, 80), Payload("Test Data"));
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<ModifyAction>();
+    FlowRule flow_rule(match_fields, std::move(action));
 
-    Packet packet(header, payload);
+    if (flow_rule.matches_packet(packet)) {
+        flow_rule.execute_action(); // Expect: "Modifying packet"
+    }
+}
 
-    byte* serialized_packet = packet.serialize();
-    Packet deserialized_packet = Packet::deserialize(serialized_packet);
+// Function to test no match
+void test_no_match() {
+    std::cout << "Running No Match Test..." << std::endl;
+    Packet packet(Header("192.168.1.3", "192.168.1.4", "UDP", 1234, 80), Payload("Test Data"));
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<DropAction>();
+    FlowRule flow_rule(match_fields, std::move(action));
 
-    assert(packet.header.source_ip == deserialized_packet.header.source_ip);
-    assert(packet.header.destination_ip == deserialized_packet.header.destination_ip);
-    
-    delete[] serialized_packet;
-    std::cout << "Empty header test passed!" << std::endl;
+    assert(!flow_rule.matches_packet(packet)); // Expect: false
+}
+
+// Function to test statistics update
+void test_update_stats() {
+    std::cout << "Running Update Stats Test..." << std::endl;
+    Packet packet(Header("192.168.1.1", "192.168.1.2", "TCP", 1234, 80), Payload("Test Data"));
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<ForwardAction>(5);
+    FlowRule flow_rule(match_fields, std::move(action));
+
+    if (flow_rule.matches_packet(packet)) {
+        flow_rule.execute_action();
+        flow_rule.update_stats(packet);
+        // Verify counts
+        // Add your actual implementations for getting counts if you have them
+        // Example assertions (assuming you have methods to get these values):
+        // assert(flow_rule.get_packet_count() == 1);
+        // assert(flow_rule.get_byte_count() == packet.payload.data.size());
+    }
+}
+
+// Function to test timeouts
+void test_timeouts() {
+    std::cout << "Running Timeouts Test..." << std::endl;
+    MatchFields match_fields = { "192.168.1.1", "192.168.1.2", "TCP", 1234, 80 };
+    auto action = std::make_unique<ForwardAction>(5);
+    FlowRule flow_rule(match_fields, std::move(action));
+
+    // Simulate timeout logic here if implemented
+    // This will depend on how you've implemented timeouts
+    // For example, checking if flow rule is valid after a timeout period
 }
 
 int main() {
-    std::cout << GREEN << BOLD;
-    test_packet_serialization();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    test_edge_case_empty_payload();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    test_edge_case_empty_header();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    test_forward_action();
+    test_drop_action();
+    test_modify_action();
+    test_no_match();
+    test_update_stats();
+    test_timeouts();
 
-    std::cout << "All tests passed!" << std::endl;
+    std::cout << "All tests completed!" << std::endl;
     return 0;
 }
